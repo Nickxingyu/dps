@@ -9,12 +9,13 @@ public class Q3 {
     
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder().appName("Simple Application")
-							.config("spark.master","local")
-                            .getOrCreate();
+			        .config("spark.master","local")
+                                .getOrCreate();
         String data_source_for_partition_file = "s3a://pf-new-hire/partitioned_eventsmap/parquet/";
         String[] recived_days ={"2020-04-01","2020-04-02","2020-04-03","2020-04-04","2020-04-05","2020-04-06","2020-04-07"};
 
 // Remember adding forloop to summary all data finally
+//Don't forget to get out the dirty data
         Dataset<Row> events = spark.read().option("basePath", data_source_for_partition_file)
                     .parquet(data_source_for_partition_file+recived_days[0])
                     .selectExpr("f_timestamps_day","f_device_id")
