@@ -8,7 +8,7 @@ import static org.apache.spark.sql.functions.*;
 public class Q2 {
     public static void main(String[] args) {
         SparkSession spark = SparkSession.builder().appName("Simple Application")
-			                    .config("spark.master","local")
+			                    .config("spark.master","local[*]")
                                 .getOrCreate();
         String data_source_for_partition_file = "s3a://pf-new-hire/partitioned_eventsmap/parquet/";
         String[] recived_days ={"2020-04-01","2020-04-02","2020-04-03","2020-04-04","2020-04-05","2020-04-06","2020-04-07"};

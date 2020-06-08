@@ -10,13 +10,12 @@ public class Q2_result {
         SparkSession spark = SparkSession
                                 .builder()
                                 .appName("Simple Application")
-			                    .config("spark.master","local")
+			                    .config("spark.master","local[*]")
                                 .getOrCreate();
 
         String intermediate_storage_path = "/home/ubuntu/hero/dps-q2/event-phase_1";
 
         //Read the intermediate data and summary the count
-        
         Dataset<Row> result = 
         spark.read().option("basePath", intermediate_storage_path)
         .parquet(intermediate_storage_path)

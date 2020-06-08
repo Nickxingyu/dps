@@ -27,7 +27,7 @@ public class Q1
 		SparkSession spark = SparkSession
 							.builder()
 							.appName("Simple Application")
-							.config("spark.master","local")
+							.config("spark.master","local[*]")
                             .getOrCreate();
         String data_source_for_partition_file = "s3a://pf-new-hire/partitioned_eventsmap/parquet/";
 		String intermediate_storage_path = "/home/ubuntu/hero/dps-q1/event-phase_1";
@@ -35,10 +35,8 @@ public class Q1
 		String[] recived_days ={"2020-04-01","2020-04-02","2020-04-03","2020-04-04","2020-04-05","2020-04-06","2020-04-07"};
 
 //Get data from difference directory and summary to intermediate_storage directory
-
 		for(int i = 0; i < recived_days.length; i++){
 			String recived_day = "'" + recived_days[i] + "'";
-
 			//Select the col I want and drop the dirty data
 			Dataset<Row> events = spark.read()
 			.option("basePath",data_source_for_partition_file)
@@ -62,16 +60,16 @@ public class Q1
 				explode(col("e_segment_map")),
 				col("f_country"),
 				col("f_os")
-            ).cache();
+            );
 
 			//Get the guids from each event and count 
 			Dataset<Row> guid_events = explode_events
 			.filter(col("key").isin(list_of_guid.stream().toArray()))
 			.groupBy(
 				col("e_key"),
-				col("f_timestamp_day"),
-				col("f_country"),
-				col("f_os"),
+				col("f_timestamp_day").alias("Date"),
+				col("f_country").alias("Country"),
+				col("f_os").alias("OS"),
 				col("key").alias("feature"))
 			.agg(expr("COUNT('*')").alias("count"));
 
@@ -103,9 +101,9 @@ public class Q1
 				col("f_os").alias("OS"),
 				col("key").alias("feature"))
 			.agg(expr("COUNT('*')").alias("count"));
-
-			guid_events.write().mode("append").partitionBy("f_timestamp_day","e_key").parquet(intermediate_storage_path);
-			guid_list_events.write().mode("append").partitionBy("f_timestamp_day","e_key").parquet(intermediate_storage_path);
+			
+			guid_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
+			guid_list_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
 		}	
     }
 }
