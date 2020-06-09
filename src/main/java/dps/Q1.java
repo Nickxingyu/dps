@@ -1,10 +1,12 @@
 package dps;
 
 
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
-
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
@@ -17,40 +19,39 @@ public class Q1
 {
     public static void main( String[] args )
     {
-        List<String> list_of_guid = Arrays.asList(
-			"lipstick_item_guid", "blush_item_guid", "eyebrows_item_guid", "eyecolor_item_guid", "eyelashes_item_guid", 
-			"eyeliner_item_guid", "foundation_item_guid", "wig_item_guid", "eyewear_pattern_guid", "headband_pattern_guid", 
-            "necklace_pattern_guid", "earrings_pattern_guid", "fakeeyelashes_palette_guid", "haircolor_item_guid", "hairDye_item_guid");
-            
-        List<String> list_of_guid_list = Arrays.asList("eyeshadow_item_guid_list", "face_contour_item_guid_list");
-
 		SparkSession spark = SparkSession
 							.builder()
 							.appName("Simple Application")
 							.config("spark.master","local[*]")
                             .getOrCreate();
         String data_source_for_partition_file = "s3a://pf-new-hire/partitioned_eventsmap/parquet/";
-		String intermediate_storage_path = "/home/ubuntu/hero/dps-q1/event-phase_1";
+		String intermediate_storage_path = "/data/tmp/dps-q1/event-phase_1";
 
-		String[] recived_days ={"2020-04-01","2020-04-02","2020-04-03","2020-04-04","2020-04-05","2020-04-06","2020-04-07"};
-
+		LocalDate start_date = LocalDate.parse("2020-04-01"); 
+        LocalDate end_date = LocalDate.parse("2020-04-07"); 
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
+		
 //Get data from difference directory and summary to intermediate_storage directory
-		for(int i = 0; i < recived_days.length; i++){
-			String recived_day = "'" + recived_days[i] + "'";
-			//Select the col I want and drop the dirty data
+		for(
+            LocalDate date = start_date;
+            date.compareTo(end_date) <= 0; 
+            date = date.plusDays(1)
+        ){
+			String received_date = date.format(formatter);
+			//Select the col needed and drop the dirty data
 			Dataset<Row> events = spark.read()
 			.option("basePath",data_source_for_partition_file)
-			.parquet(data_source_for_partition_file+"/"+recived_days[i]+"/")
+			.parquet(data_source_for_partition_file+"/"+received_date)
 			.select(
 				col("e_key"),
 				col("f_timestamp_day"),
 				col("e_segment_map"),
 				col("f_country"),
 				col("f_os"),
-				expr(recived_day).alias("recived_day")
+				expr("'"+received_date+"'").alias("received_date")
 			)
 			.filter(expr(
-				"DATEDIFF(recived_day,f_timestamp_day) < 31 AND DATEDIFF(recived_day,f_timestamp_day) >= 0"
+				"DATEDIFF(received_date,f_timestamp_day) < 31 AND DATEDIFF(received_date,f_timestamp_day) >= 0"
 			));
 
 			//Explode the Maptype column 'e_segment_map'
@@ -64,7 +65,8 @@ public class Q1
 
 			//Get the guids from each event and count 
 			Dataset<Row> guid_events = explode_events
-			.filter(col("key").isin(list_of_guid.stream().toArray()))
+			.filter(col("key").rlike("item_guid$|pattern_guid$"))
+			.filter(col("value").isNotNull())
 			.groupBy(
 				col("e_key"),
 				col("f_timestamp_day").alias("Date"),
@@ -76,10 +78,10 @@ public class Q1
 
 			//Create a new DataFrame from explode and drop the duplicate values of each guid 
 			Dataset<Row> drop_duplicate_feature = spark.createDataFrame(
-				explode_events.filter(col("key").isin(list_of_guid_list.stream().toArray()))
+				explode_events.filter(col("key").endsWith("item_guid_list"))
 				.javaRDD().map(row->{
 				String value = row.getString(3);
-				String[] array_of_value = value.split("\\^");
+				String[] array_of_value = value.split("\\^");//**********
 				array_of_value = new HashSet<String>(Arrays.asList(array_of_value)).toArray(new String[0]);
 				StringBuilder result = new StringBuilder();
 				for(int index = 0; index < array_of_value.length; index++){
@@ -94,6 +96,7 @@ public class Q1
 			//Group and count
 			Dataset<Row> guid_list_events = drop_duplicate_feature
 			.withColumn("detial_value", explode(split(col("value"), "\\^")))
+			.filter(col("detial_value").isNotNull())
 			.groupBy(
 				col("e_key"),
 				col("f_timestamp_day").alias("Date"),

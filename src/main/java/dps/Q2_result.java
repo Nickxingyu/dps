@@ -13,7 +13,7 @@ public class Q2_result {
 			                    .config("spark.master","local[*]")
                                 .getOrCreate();
 
-        String intermediate_storage_path = "/home/ubuntu/hero/dps-q2/event-phase_1";
+        String intermediate_storage_path = "/data/tmp/dps-q2/event-phase_1";
 
         //Read the intermediate data and summary the count
         Dataset<Row> result = 
@@ -24,7 +24,7 @@ public class Q2_result {
 
         result
         .coalesce(1)
-        .write().mode("overwrite").parquet("/home/ubuntu/hero/dps-q2/result/");
+        .write().mode("overwrite").parquet("/data/tmp/dps-q2/result/");
 
         result.show(100);
     }

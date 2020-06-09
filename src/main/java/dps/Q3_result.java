@@ -14,7 +14,7 @@ public class Q3_result {
 			                .config("spark.master","local[*]")
                             .getOrCreate();
 
-        String intermediate_storage_path ="/home/ubuntu/hero/dps-q3/event-phase_1";
+        String intermediate_storage_path ="/data/tmp/dps-q3/event-phase_1";
         
         //Read the intermediate data and summary the count
         
@@ -63,8 +63,8 @@ public class Q3_result {
         result_of_daily
         .union(result_of_weekly)
         .orderBy("Date","AorN","Duration")
-        //.coalesce(1)
-        //.write().mode("overwrite").parquet("/home/ubuntu/hero/dps-q3/result/");
-        .show(1000);
+        .coalesce(1)
+        .write().mode("overwrite").parquet("/data/tmp/dps-q3/result/");
+        //.show(1000);
     }
 }
