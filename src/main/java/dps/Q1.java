@@ -28,7 +28,7 @@ public class Q1
 		String intermediate_storage_path = "/data/tmp/dps-q1/event-phase_1";
 
 		LocalDate start_date = LocalDate.parse("2020-04-01"); 
-        LocalDate end_date = LocalDate.parse("2020-04-07"); 
+        LocalDate end_date = LocalDate.parse("2020-04-01"); 
         DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE;
 		
 //Get data from difference directory and summary to intermediate_storage directory
@@ -75,26 +75,38 @@ public class Q1
 				col("key").alias("feature"))
 			.agg(expr("COUNT('*')").alias("count"));
 
+			Dataset<Row> feature_of_guid_events = spark.createDataFrame(
+				guid_events.javaRDD().map(row->{
+					String key = row.getString(2);
+					String[] array_of_key = key.split("_");
+					return RowFactory.create(row.get(0),row.get(1),array_of_key[0],row.get(3),row.get(4),row.get(5));
+				}),
+				guid_events.schema()
+			);
 
 			//Create a new DataFrame from explode and drop the duplicate values of each guid 
 			Dataset<Row> drop_duplicate_feature = spark.createDataFrame(
 				explode_events.filter(col("key").endsWith("item_guid_list"))
 				.javaRDD().map(row->{
-				String value = row.getString(3);
-				String[] array_of_value = value.split("\\^");//**********
-				array_of_value = new HashSet<String>(Arrays.asList(array_of_value)).toArray(new String[0]);
-				StringBuilder result = new StringBuilder();
-				for(int index = 0; index < array_of_value.length; index++){
-					result.append(array_of_value[index]);
-					if(index == array_of_value.length - 1)
-						break;
-					result.append("^");
-				}
-				return RowFactory.create(row.get(0),row.get(1),row.get(2),result.toString(),row.get(4),row.get(5));
-			}) , explode_events.schema());
+					String key = row.getString(2);
+					String value = row.getString(3);
+					String[] array_of_value = value.split("\\^");//**********
+					String[] array_of_key = key.split("_");
+					array_of_value = new HashSet<String>(Arrays.asList(array_of_value)).toArray(new String[0]);
+					StringBuilder result = new StringBuilder();
+					for(int index = 0; index < array_of_value.length; index++){
+						result.append(array_of_value[index]);
+						if(index == array_of_value.length - 1)
+							break;
+						result.append("^");
+					}
+					return RowFactory.create(row.get(0),row.get(1),array_of_key[0],result.toString(),row.get(4),row.get(5));
+				}), 
+				explode_events.schema()
+			);
 
 			//Group and count
-			Dataset<Row> guid_list_events = drop_duplicate_feature
+			Dataset<Row> feature_of_guid_list_events = drop_duplicate_feature
 			.withColumn("detial_value", explode(split(col("value"), "\\^")))
 			.filter(col("detial_value").isNotNull())
 			.groupBy(
@@ -105,8 +117,8 @@ public class Q1
 				col("key").alias("feature"))
 			.agg(expr("COUNT('*')").alias("count"));
 			
-			guid_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
-			guid_list_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
+			feature_of_guid_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
+			feature_of_guid_list_events.write().mode("append").partitionBy("Date","e_key").parquet(intermediate_storage_path);
 		}	
     }
 }

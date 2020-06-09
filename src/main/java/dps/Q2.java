@@ -3,6 +3,7 @@ package dps;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
 import org.apache.spark.sql.Row;
+import org.apache.spark.sql.RowFactory;
 import static org.apache.spark.sql.functions.*;
 
 import java.time.LocalDate;
@@ -59,8 +60,23 @@ public class Q2 {
                 col("e_key"),
                 col("key").alias("feature"),
                 col("count")
-            );
-            count.write().mode("append").partitionBy("Date").parquet(intermediate_storage_path);
+            ).withColumn("Sku_or_Item",col("feature"));
+
+            spark.createDataFrame(
+                count.javaRDD().map(row->{
+                    String feature = row.getString(2);
+                    String[] array_of_feature = feature.split("_");
+                    return RowFactory.create(row.get(0),row.get(1),array_of_feature[0],row.get(3),array_of_feature[1]);
+                }),
+                count.schema()
+            ).selectExpr(
+                "Date",
+                "e_key",
+                "feature",
+                "Sku_or_Item",
+                "count"
+            ).show(100);
+            //.write().mode("append").partitionBy("Date").parquet(intermediate_storage_path);
         }
     }
 }
