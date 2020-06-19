@@ -93,9 +93,15 @@ public class Q1Q2_result {
 				String value = row.getString(4);
                 String[] array_of_feature = feature.split("_");
                 if(array_of_feature[1].equals("sku")){
-                    return RowFactory.create(row.get(0),row.get(1),row.get(2),array_of_feature[0].toLowerCase(),value.toUpperCase(),row.get(5),row.get(6),row.get(7),"sku");
+                    return RowFactory.create(
+						row.get(0),row.get(1),row.get(2),array_of_feature[0].toLowerCase(),
+						value.toUpperCase(),row.get(5),row.get(6),row.get(7),"sku"
+					);
                 }else{
-                    return RowFactory.create(row.get(0),row.get(1),row.get(2),array_of_feature[0].toLowerCase(),value.toUpperCase(),row.get(5),row.get(6),row.get(7),"item");
+                    return RowFactory.create(
+						row.get(0),row.get(1),row.get(2),array_of_feature[0].toLowerCase(),
+						value.toUpperCase(),row.get(5),row.get(6),row.get(7),"item"
+					);
                 }
             }),
             result.schema());
@@ -397,7 +403,7 @@ public class Q1Q2_result {
 		.option("dbtable","event_count")
 		.option("user", "root")
 		.option("password","perfect")
-		.save();;
+		.save();
 		/*
 		result.show(100);
 		*/

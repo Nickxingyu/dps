@@ -52,7 +52,7 @@ public class Q1Q2
 			//Select the col needed and drop the dirty data
 			Dataset<Row> events = spark.read()
 			.option("basePath",data_source_for_partition_file)
-			.parquet(data_source_for_partition_file+"/"+received_date + "/")//+"a_complex_time=[0-9]*_[0-9]*0330")
+			.parquet(data_source_for_partition_file+"/"+received_date + "/")                                                               //+"a_complex_time=[0-9]*_[0-9]*0330")
 			.select(
 				col("e_key"),
 				col("f_timestamp_day"),

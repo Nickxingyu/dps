@@ -23,23 +23,15 @@ public class Q3_result {
         .filter(expr(
 			"DATEDIFF("+start_date+",received_date) < 31 AND DATEDIFF(received_date,"+end_date+") < 31 AND "+
 			"DATEDIFF("+start_date+",date) < 31 AND DATEDIFF(date,"+end_date+") <= 0"
-		))
+        ))
         .distinct()
         .selectExpr("date","f_device_id");
-        
-        activeUsers
-        .groupBy("f_device_id").agg(min("date").alias("date"))
-        .groupBy("date").agg(expr("COUNT(*) as new_users_count"));
 
         Dataset<Row> active_weekly_Users =
         activeUsers
         .withColumn("last_monday", date_sub(next_day(col("date"), "monday"), 7))
         .selectExpr("last_monday as date","f_device_id")
         .distinct();
-
-        active_weekly_Users
-        .groupBy("f_device_id").agg(min("date").alias("date"))
-        .groupBy("date").agg(expr("COUNT(*) as new_users_count"));
 
         Dataset<Row> result =
         activeUsers.groupBy("date").agg(expr("COUNT(*) as active_users_count"))
@@ -61,9 +53,8 @@ public class Q3_result {
             ).selectExpr("date","'weekly' as duration","active_users_count","new_users_count")
         ).orderBy(col("date"),col("duration")).cache();
         //.show(100);
-        result.show(100);
-        
-        result.write()
+        result
+        .write()
             .format("jdbc")
             .mode("append")
             .option("driver","com.mysql.jdbc.Driver")
